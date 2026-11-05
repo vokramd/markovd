@@ -30,6 +30,8 @@ type runDetailResponse struct {
 	Steps []models.Step `json:"steps"`
 }
 
+const maxStreamLogLineBytes = 16 * 1024 * 1024
+
 func (s *Server) handleListPVCs(w http.ResponseWriter, r *http.Request) {
 	pvcs, err := s.runner.ListPVCs(r.Context())
 	if err != nil {
@@ -363,6 +365,7 @@ func (s *Server) handleStreamJobLogs(w http.ResponseWriter, r *http.Request) {
 	defer stream.Close()
 
 	scanner := bufio.NewScanner(stream)
+	scanner.Buffer(make([]byte, 64*1024), maxStreamLogLineBytes)
 	for scanner.Scan() {
 		if r.Context().Err() != nil {
 			return
@@ -371,7 +374,11 @@ func (s *Server) handleStreamJobLogs(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 
-	fmt.Fprintf(w, "event: done\ndata: stream ended\n\n")
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(w, "event: error\ndata: reading log stream: %s\n\n", err.Error())
+	} else {
+		fmt.Fprintf(w, "event: done\ndata: stream ended\n\n")
+	}
 	flusher.Flush()
 }
 
@@ -423,6 +430,7 @@ func (s *Server) handleStreamRunLogs(w http.ResponseWriter, r *http.Request) {
 	defer stream.Close()
 
 	scanner := bufio.NewScanner(stream)
+	scanner.Buffer(make([]byte, 64*1024), maxStreamLogLineBytes)
 	for scanner.Scan() {
 		if r.Context().Err() != nil {
 			return
@@ -431,7 +439,11 @@ func (s *Server) handleStreamRunLogs(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 
-	fmt.Fprintf(w, "event: done\ndata: stream ended\n\n")
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(w, "event: error\ndata: reading log stream: %s\n\n", err.Error())
+	} else {
+		fmt.Fprintf(w, "event: done\ndata: stream ended\n\n")
+	}
 	flusher.Flush()
 }
 
