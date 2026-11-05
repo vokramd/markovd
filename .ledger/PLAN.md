@@ -33,6 +33,8 @@ None.
 
 ## Done Tasks
 
+- [Make runs help available locally](tasks/done/cli-runs-help.md)
+- [Show run start date/time in CLI tables](tasks/done/cli-run-start-times.md)
 - [Use available width on large displays](tasks/done/wide-screen-layout.md)
 - [Persistent run scheduling](tasks/done/run-scheduling.md), [plan](plans/006-run-scheduling.md)
 - [Cancelling a run stops the Jobs its steps are attached to](tasks/done/cancel-stops-step-jobs.md)
@@ -69,6 +71,8 @@ None.
 
 ## Fixed Bugs
 
+- [Runs help tries to authenticate](bugs/fixed/cli-runs-help-authenticates.md)
+- [`runs logs --follow` stops early on long log lines](bugs/fixed/runs-logs-follow-stops-on-long-lines.md)
 - [Schedule editor loading race](bugs/fixed/schedule-edit-form-loading-race.md)
 - [Run graph flattens nested workflow calls](bugs/fixed/run-graph-flattens-nested-workflows.md)
 - [Run graph workflow boundary labels overlap fan-out branches](bugs/fixed/run-graph-workflow-boundary-labels-overlap.md)

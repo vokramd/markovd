@@ -585,3 +585,34 @@ build passed. Browser measurements across seven pages and desktop sizes confirm
 aligned containers and 3,408px of usable table width at 4K. Rebuilt and deployed
 to `markovd.local`, then confirmed the deployed CSS in an isolated browser
 context with mocked API responses. See the [completed task](../tasks/done/wide-screen-layout.md).
+
+## 2026-10-16: CLI run start timestamps
+
+Added aligned headers and a `STARTED` date/time column to run list and single-run
+tables on `feat/cli-run-start-times`. Timestamps use host local time and an
+explicit UTC offset; missing timestamps show `-`. Structured output retains
+the API fields. CLI package tests and rebuild pass; live list/detail and JSON
+reads confirm the change through Breadboard's local wrapper. No server rollout
+or model calls. See the [completed task](../tasks/done/cli-run-start-times.md).
+
+## 2026-10-17: local runs help
+
+`runs --help` previously tried to authenticate before recognizing help. Moved
+global flag parsing and help handling ahead of configuration loading and API
+client creation. Run-group help now lists commands, flags, and examples;
+`runs -h`, `runs help`, `help runs`, and bare `runs` also work locally. CLI
+package tests pass with regression coverage that prevents config, credential,
+and network dependencies. Rebuilt the local CLI and verified Breadboard's exact
+wrapper command and an offline invocation. No deployment or inference needed.
+See the [completed task](../tasks/done/cli-runs-help.md). Uncommitted on
+`feat/cli-run-start-times`; earlier timestamp changes are preserved.
+
+## 2026-11-04: follow logs past long lines
+
+Recorded and closed the log-follow fix that was left without a ledger entry.
+Stream lines above 64 KiB used to end `runs logs --follow` early, and the
+server reported `done` even when the read failed. Both stream handlers and the
+CLI now accept lines up to 16 MiB; read errors are sent as `error` events; and
+after the stream ends, `--follow` waits for the run to finish. `go test ./...`
+passes. Committed with the run start-time and help changes, then merged to
+`main`. See the [bug](../bugs/fixed/runs-logs-follow-stops-on-long-lines.md).

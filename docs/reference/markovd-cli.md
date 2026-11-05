@@ -494,11 +494,27 @@ Delete a workflow:
 
 ## Runs
 
+Show the run commands and their options:
+
+```bash
+./bin/markovd-cli runs --help
+```
+
+`runs -h`, `runs help`, and `help runs` show the same help. Help is available
+locally without loading credentials, reading password input, or contacting the
+server. Running `runs` with no subcommand also prints this usage.
+
 List runs:
 
 ```bash
 ./bin/markovd-cli runs list
 ```
+
+Table output includes `RUN ID`, `WORKFLOW`, `STATUS`, and `STARTED` columns.
+`STARTED` shows the date and time in the CLI host's local time zone with a UTC
+offset, for example `2026-10-16 18:54:28 -04:00`. Runs that have not started show
+`-`. Single-run table output uses the same columns. JSON and YAML retain
+the API's original timestamps; use those formats for scripts.
 
 Get run details:
 
@@ -735,5 +751,7 @@ export MARKOVD_INSECURE_SKIP_TLS_VERIFY=true
 - `auth login --save` writes user config, not project-local config.
 - `preferences set` is intentionally minimal and does not yet provide
   structured flags for default PVC and Secret mount lists.
-- `runs logs --follow` streams the API's current server-sent events format and
-  prints `data:` lines.
+- `runs logs --follow` streams the API's current server-sent events format,
+  prints log data without the SSE completion marker, and keeps polling the run
+  after the log stream ends until it completes, fails, is cancelled, or the
+  command is interrupted. It reports the status while waiting.

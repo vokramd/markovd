@@ -93,6 +93,39 @@ func TestHelpCommandsExitSuccessfully(t *testing.T) {
 	}
 }
 
+func TestRunsHelpDoesNotLoadConfigOrAuthenticate(t *testing.T) {
+	for _, command := range [][]string{{"runs", "--help"}, {"runs", "-h"}, {"runs", "help"}, {"help", "runs"}, {"runs"}} {
+		t.Run(strings.Join(command, " "), func(t *testing.T) {
+			// Help must work even with missing config/CA files, unreadable stdin,
+			// and an unreachable API endpoint.
+			args := append([]string{
+				"--config", filepath.Join(t.TempDir(), "missing.toml"),
+				"--ca-cert", filepath.Join(t.TempDir(), "missing.pem"),
+				"--password-stdin", "--server", "http://127.0.0.1:0",
+			}, command...)
+			var stdout, stderr bytes.Buffer
+			if err := runCLI(context.Background(), args, &stdout, &stderr, unexpectedStdin{t}); err != nil {
+				t.Fatalf("runCLI(%v): %v", command, err)
+			}
+			for _, want := range []string{"Usage:", "runs <command>", "list", "get <run-id>", "create <workflow-name>", "wait <run-id>", "cancel <run-id>", "delete <run-id>", "logs <run-id>", "--workflow", "--var", "--vars-file", "--debug", "--volume", "--secret-volume", "--wait", "--follow"} {
+				if !strings.Contains(stdout.String(), want) {
+					t.Errorf("help is missing %q: %s", want, &stdout)
+				}
+			}
+			if stderr.Len() != 0 {
+				t.Errorf("stderr = %q", stderr.String())
+			}
+		})
+	}
+}
+
+type unexpectedStdin struct{ t *testing.T }
+
+func (r unexpectedStdin) Read([]byte) (int, error) {
+	r.t.Fatal("help must not read credentials from stdin")
+	return 0, io.EOF
+}
+
 func TestResolveConfigPrecedence(t *testing.T) {
 	tmp := t.TempDir()
 	oldWD, err := os.Getwd()
@@ -115,7 +148,11 @@ ssl_verify = false
 `), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg, rest, err := resolveConfig([]string{"--server", "https://flag.example", "--username", "flag-user", "health"}, bytes.NewReader(nil))
+	global, rest, err := parseGlobalFlags([]string{"--server", "https://flag.example", "--username", "flag-user", "health"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := resolveConfig(global, bytes.NewReader(nil))
 	if err != nil {
 		t.Fatal(err)
 	}

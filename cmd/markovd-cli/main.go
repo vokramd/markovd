@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"golang.org/x/term"
@@ -28,6 +29,7 @@ const (
 	defaultOutput       = "table"
 	defaultPollInterval = 2 * time.Second
 	defaultTimeout      = 30 * time.Minute
+	maxSSELineBytes     = 32 * 1024 * 1024
 )
 
 type cliConfig struct {
@@ -193,7 +195,7 @@ func exitCode(err error) int {
 }
 
 func runCLI(ctx context.Context, args []string, stdout, stderr io.Writer, stdin io.Reader) error {
-	cfg, rest, err := resolveConfig(args, stdin)
+	global, rest, err := parseGlobalFlags(args)
 	if errors.Is(err, flag.ErrHelp) {
 		printUsage(stdout)
 		return nil
@@ -202,8 +204,20 @@ func runCLI(ctx context.Context, args []string, stdout, stderr io.Writer, stdin 
 		return err
 	}
 	if len(rest) == 0 || rest[0] == "help" {
-		printUsage(stdout)
+		if len(rest) > 1 && rest[1] == "runs" {
+			printRunsUsage(stdout)
+		} else {
+			printUsage(stdout)
+		}
 		return nil
+	}
+	if rest[0] == "runs" && (len(rest) == 1 || len(rest) == 2 && (rest[1] == "--help" || rest[1] == "-h" || rest[1] == "help")) {
+		printRunsUsage(stdout)
+		return nil
+	}
+	cfg, err := resolveConfig(global, stdin)
+	if err != nil {
+		return err
 	}
 	client, err := newAPIClient(cfg)
 	if err != nil {
@@ -275,17 +289,44 @@ Global flags:
   --ca-cert PATH`)
 }
 
-func resolveConfig(args []string, stdin io.Reader) (cliConfig, []string, error) {
+func printRunsUsage(w io.Writer) {
+	fmt.Fprintln(w, `Usage:
+  markovd-cli [global flags] runs <command> [arguments] [flags]
+
+Commands:
+  list                         List runs, including their start date and time
+  get <run-id>                  Show a run
+  create <workflow-name>        Start a registered workflow
+  wait <run-id>                 Wait for a run to finish
+  cancel <run-id>               Cancel a run
+  delete <run-id>               Delete a run
+  logs <run-id> [--follow]      Show logs, or stream new logs with --follow
+
+Create flags:
+  --workflow NAME              Override the workflow entrypoint
+  --var KEY=VALUE               Set a workflow variable (repeatable)
+  --vars-file PATH              Load variables from a JSON or YAML file
+  --debug                      Enable workflow debug mode
+  --volume PVC:/path           Mount a PVC (repeatable)
+  --secret-volume SECRET:/path Mount a secret (repeatable)
+  --wait                       Wait for the new run to finish
+
+Examples:
+  markovd-cli runs list
+  markovd-cli runs create my-workflow --var model=claude-opus-4-6 --wait
+  markovd-cli runs logs markov-run-1234 --follow
+  markovd-cli --output json runs get markov-run-1234
+
+Global flags go before "runs". Use markovd-cli --help to list them.
+Help is local and does not require authentication or a running server.`)
+}
+
+func resolveConfig(global cliConfig, stdin io.Reader) (cliConfig, error) {
 	cfg := cliConfig{
 		Server:       defaultServer,
 		Output:       defaultOutput,
 		Timeout:      defaultTimeout,
 		PollInterval: defaultPollInterval,
-	}
-
-	global, rest, err := parseGlobalFlags(args)
-	if err != nil {
-		return cfg, nil, err
 	}
 
 	for _, path := range defaultConfigPaths() {
@@ -294,7 +335,7 @@ func resolveConfig(args []string, stdin io.Reader) (cliConfig, []string, error) 
 	if global.ConfigPath != "" {
 		raw, err := readConfig(global.ConfigPath)
 		if err != nil {
-			return cfg, nil, err
+			return cfg, err
 		}
 		mergeRawConfig(&cfg, raw)
 		cfg.ConfigPath = global.ConfigPath
@@ -304,11 +345,11 @@ func resolveConfig(args []string, stdin io.Reader) (cliConfig, []string, error) 
 	if cfg.PasswordStdin {
 		b, err := io.ReadAll(stdin)
 		if err != nil {
-			return cfg, nil, err
+			return cfg, err
 		}
 		cfg.Password = strings.TrimRight(string(b), "\r\n")
 	}
-	return cfg, rest, nil
+	return cfg, nil
 }
 
 func parseGlobalFlags(args []string) (cliConfig, []string, error) {
@@ -1289,12 +1330,16 @@ func runCreateRun(ctx context.Context, c *apiClient, cfg cliConfig, args []strin
 func waitRun(ctx context.Context, c *apiClient, cfg cliConfig, runID string, stdout io.Writer) (run, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
+	return pollRunUntilTerminal(waitCtx, c, cfg, runID, stdout)
+}
+
+func pollRunUntilTerminal(ctx context.Context, c *apiClient, cfg cliConfig, runID string, stdout io.Writer) (run, error) {
 	ticker := time.NewTicker(cfg.PollInterval)
 	defer ticker.Stop()
 	last := ""
 	for {
 		var r run
-		if err := c.do(waitCtx, http.MethodGet, "/runs/"+url.PathEscape(runID), nil, &r); err != nil {
+		if err := c.do(ctx, http.MethodGet, "/runs/"+url.PathEscape(runID), nil, &r); err != nil {
 			return r, err
 		}
 		if cfg.Output == "table" && r.Status != last {
@@ -1308,8 +1353,8 @@ func waitRun(ctx context.Context, c *apiClient, cfg cliConfig, runID string, std
 			return r, fmt.Errorf("run %s %s", r.RunID, r.Status)
 		}
 		select {
-		case <-waitCtx.Done():
-			return r, waitCtx.Err()
+		case <-ctx.Done():
+			return r, ctx.Err()
 		case <-ticker.C:
 		}
 	}
@@ -1467,7 +1512,12 @@ func runLogs(ctx context.Context, c *apiClient, cfg cliConfig, args []string, st
 	}
 	path := "/runs/" + url.PathEscape(positionals[0]) + "/logs"
 	if follow {
-		return streamSSE(ctx, c, path+"/stream", stdout)
+		if err := streamSSE(ctx, c, path+"/stream", stdout); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "log stream ended; waiting for run %s to finish\n", positionals[0])
+		_, err := pollRunUntilTerminal(ctx, c, cfg, positionals[0], stdout)
+		return err
 	}
 	var out any
 	if err := c.do(ctx, http.MethodGet, path, nil, &out); err != nil {
@@ -1493,13 +1543,49 @@ func streamSSE(ctx context.Context, c *apiClient, path string, stdout io.Writer)
 		return apiError{StatusCode: resp.StatusCode}
 	}
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 64*1024), maxSSELineBytes)
+	event := "message"
+	var data []string
+	dispatch := func() error {
+		if event == "error" {
+			return errors.New(strings.Join(data, "\n"))
+		}
+		if event != "done" && len(data) > 0 {
+			if _, err := fmt.Fprintln(stdout, strings.Join(data, "\n")); err != nil {
+				return err
+			}
+		}
+		event = "message"
+		data = nil
+		return nil
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "data: ") {
-			fmt.Fprintln(stdout, strings.TrimPrefix(line, "data: "))
+		if line == "" {
+			if err := dispatch(); err != nil {
+				return err
+			}
+			continue
+		}
+		if strings.HasPrefix(line, ":") {
+			continue
+		}
+		field, value, ok := strings.Cut(line, ":")
+		if !ok {
+			value = ""
+		}
+		value = strings.TrimPrefix(value, " ")
+		switch field {
+		case "event":
+			event = value
+		case "data":
+			data = append(data, value)
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return dispatch()
 }
 
 func runSimpleList(ctx context.Context, c *apiClient, cfg cliConfig, args []string, path string, stdout io.Writer) error {
@@ -1588,11 +1674,20 @@ func writeTable(w io.Writer, v any) error {
 	case workflow:
 		fmt.Fprintf(w, "%s\t%s\t%s\n", x.Name, x.DefinitionKind, x.SourcePath)
 	case []run:
+		table := tabwriter.NewWriter(w, 0, 8, 2, ' ', 0)
+		fmt.Fprintln(table, "RUN ID\tWORKFLOW\tSTATUS\tSTARTED")
 		for _, r := range x {
-			fmt.Fprintf(w, "%s\t%s\t%s\n", r.RunID, r.WorkflowName, r.Status)
+			started := r.StartedAt
+			if started == "" {
+				started = "-"
+			} else if timestamp, err := time.Parse(time.RFC3339Nano, started); err == nil {
+				started = timestamp.Local().Format("2006-01-02 15:04:05 -07:00")
+			}
+			fmt.Fprintf(table, "%s\t%s\t%s\t%s\n", r.RunID, r.WorkflowName, r.Status, started)
 		}
+		return table.Flush()
 	case run:
-		fmt.Fprintf(w, "%s\t%s\t%s\n", x.RunID, x.WorkflowName, x.Status)
+		return writeTable(w, []run{x})
 	case map[string]string:
 		for k, val := range x {
 			fmt.Fprintf(w, "%s\t%s\n", k, val)
