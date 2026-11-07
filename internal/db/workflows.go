@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 func (d *DB) CreateWorkflow(ctx context.Context, name, yaml string, uploadedBy int) (*models.Workflow, error) {

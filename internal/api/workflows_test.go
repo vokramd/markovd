@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 func TestWorkflowDefinitionFromLegacyPayload(t *testing.T) {

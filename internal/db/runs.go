@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func (d *DB) CreateRun(ctx context.Context, runID, workflowName string, workflowID, triggeredBy int, varsJSON, volumesJSON, secretVolumesJSON string) (*models.Run, error) {

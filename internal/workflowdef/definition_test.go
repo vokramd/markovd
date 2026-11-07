@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func TestNormalizeFileDefinition(t *testing.T) {

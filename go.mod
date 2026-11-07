@@ -1,4 +1,4 @@
-module github.com/jctanner/markovd
+module github.com/vokramd/markovd
 
 go 1.25.5
 

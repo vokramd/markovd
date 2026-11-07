@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 type ShellRunner struct {

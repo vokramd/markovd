@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markovd/internal/auth"
-	"github.com/jctanner/markovd/internal/db"
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/runner"
+	"github.com/vokramd/markovd/internal/auth"
+	"github.com/vokramd/markovd/internal/db"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/runner"
 )
 
 type scheduleRunner struct {

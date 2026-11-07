@@ -16,10 +16,10 @@ import (
 
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
-	"github.com/jctanner/markovd/internal/db"
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/runner"
 	"github.com/robfig/cron/v3"
+	"github.com/vokramd/markovd/internal/db"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/runner"
 )
 
 type scheduleRequest struct {

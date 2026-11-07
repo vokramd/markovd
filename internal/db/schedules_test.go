@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func scheduleFixture(t *testing.T, d *DB, kind string) *models.Schedule {

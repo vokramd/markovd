@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

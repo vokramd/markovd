@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 	"gopkg.in/yaml.v3"
 )
 

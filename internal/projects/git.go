@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 func CloneOrPull(url, branch, destPath string) error {

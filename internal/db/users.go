@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func (d *DB) CreateUser(ctx context.Context, username, passwordHash string) (*models.User, error) {

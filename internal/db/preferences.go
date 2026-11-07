@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func (d *DB) GetPreferences(ctx context.Context, userID int) (*models.UserPreferences, error) {

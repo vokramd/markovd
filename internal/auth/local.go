@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jctanner/markovd/internal/db"
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/db"
+	"github.com/vokramd/markovd/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

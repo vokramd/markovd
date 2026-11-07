@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jctanner/markovd/internal/models"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 func (d *DB) CreateProject(ctx context.Context, name, url, branch, clonePath string, createdBy int) (*models.Project, error) {

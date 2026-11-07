@@ -9,9 +9,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jctanner/markovd/internal/auth"
-	"github.com/jctanner/markovd/internal/db"
-	"github.com/jctanner/markovd/internal/runner"
+	"github.com/vokramd/markovd/internal/auth"
+	"github.com/vokramd/markovd/internal/db"
+	"github.com/vokramd/markovd/internal/runner"
 )
 
 type Server struct {

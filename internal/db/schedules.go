@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 var ErrScheduleBusy = errors.New("schedule is dispatching or its last run is still active")

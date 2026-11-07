@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func (d *DB) GetStepsByRunID(ctx context.Context, runID string) ([]models.Step, error) {

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jctanner/markovd/internal/projects"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/projects"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 type createProjectRequest struct {

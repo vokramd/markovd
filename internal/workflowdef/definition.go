@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

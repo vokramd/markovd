@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/jctanner/markovd/internal/workflowdef"
+	"github.com/vokramd/markovd/internal/workflowdef"
 )
 
 func TestListWorkflowDefinitions(t *testing.T) {

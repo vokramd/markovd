@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jctanner/markovd/internal/models"
+	"github.com/vokramd/markovd/internal/models"
 )
 
 func (d *DB) InsertEvent(ctx context.Context, runID, eventType, payload string) (*models.Event, error) {

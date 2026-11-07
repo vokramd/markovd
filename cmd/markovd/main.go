@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jctanner/markovd/internal/api"
-	"github.com/jctanner/markovd/internal/auth"
-	"github.com/jctanner/markovd/internal/db"
-	"github.com/jctanner/markovd/internal/runner"
+	"github.com/vokramd/markovd/internal/api"
+	"github.com/vokramd/markovd/internal/auth"
+	"github.com/vokramd/markovd/internal/db"
+	"github.com/vokramd/markovd/internal/runner"
 )
 
 func main() {
