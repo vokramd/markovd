@@ -467,3 +467,48 @@ func (f fakeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 		Request:    r,
 	}, nil
 }
+
+func TestRunEventsPassesTheCursorAndPrintsThePage(t *testing.T) {
+	var query string
+	client := fakeClient(func(r *http.Request) (int, any) {
+		if r.URL.Path != "/api/v1/runs/markov-run-1/events" {
+			return http.StatusNotFound, map[string]string{"error": "not found"}
+		}
+		query = r.URL.RawQuery
+		return http.StatusOK, map[string]any{
+			"events": []map[string]any{
+				{"id": 8, "event": map[string]any{"event_type": "step_started", "workflow_name": "main", "step_name": "a"}},
+				{"id": 9, "event": map[string]any{"event_type": "run_completed", "workflow_name": "main"}},
+			},
+			"next":   9,
+			"status": "completed",
+		}
+	})
+	var out bytes.Buffer
+	if err := runRuns(context.Background(), client, cliConfig{Output: "json"}, []string{"events", "markov-run-1", "--after", "7"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if query != "after=7" {
+		t.Errorf("query = %q, want after=7", query)
+	}
+	var page runEventsPage
+	if err := json.Unmarshal(out.Bytes(), &page); err != nil {
+		t.Fatalf("json output does not parse: %v\n%s", err, out.String())
+	}
+	if page.Next != 9 || page.Status != "completed" || len(page.Events) != 2 {
+		t.Fatalf("page = %+v", page)
+	}
+	var first map[string]string
+	if err := json.Unmarshal(page.Events[0].Event, &first); err != nil || first["step_name"] != "a" {
+		t.Errorf("the first event is passed through as it was sent: %s", page.Events[0].Event)
+	}
+
+	out.Reset()
+	if err := runRuns(context.Background(), client, cliConfig{Output: "table"}, []string{"events", "markov-run-1"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	want := "8\tstep_started\tmain.a\n9\trun_completed\tmain\nrun completed; next --after 9\n"
+	if out.String() != want {
+		t.Errorf("table output = %q, want %q", out.String(), want)
+	}
+}

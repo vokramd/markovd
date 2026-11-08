@@ -74,3 +74,32 @@ func (d *DB) ListStepProgress(ctx context.Context, rootRunID, eventRunID, workfl
 	}
 	return events, rows.Err()
 }
+
+// ListRunEvents returns the callback events of a run and of its sub-runs and forks, in the
+// order markovd stored them, starting after the event with ID afterID: the same stream markov
+// writes to a jsonl callback, so a client can replay it to follow the run.
+func (d *DB) ListRunEvents(ctx context.Context, rootRunID string, afterID, limit int) ([]models.Event, error) {
+	rows, err := d.QueryContext(ctx,
+		`SELECT id, run_id, event_type, payload, received_at
+		 FROM events
+		 WHERE (run_id = $1 OR left(run_id, length($1) + 1) = $1 || '-')
+		   AND id > $2
+		 ORDER BY id
+		 LIMIT $3`,
+		rootRunID, afterID, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing run events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []models.Event
+	for rows.Next() {
+		var e models.Event
+		if err := rows.Scan(&e.ID, &e.RunID, &e.EventType, &e.Payload, &e.ReceivedAt); err != nil {
+			return nil, fmt.Errorf("scanning event: %w", err)
+		}
+		events = append(events, e)
+	}
+	return events, rows.Err()
+}

@@ -96,3 +96,57 @@ func parseNonNegative(s string, def int) (int, error) {
 	}
 	return n, nil
 }
+
+type runEvent struct {
+	ID    int             `json:"id"`
+	Event json.RawMessage `json:"event"`
+}
+
+type runEventsResponse struct {
+	Events []runEvent `json:"events"`
+	// Next is the after= value for the next poll: the last event's ID, or the request's after.
+	Next int `json:"next"`
+	// Status is the run's status as markovd records it, so a client knows when no more events
+	// will come even if the run ended without reporting it (a pod killed mid-run).
+	Status string `json:"status"`
+}
+
+// handleRunEvents returns a run's callback events, its sub-runs' included, as markov sent
+// them. Query: after (last seen event ID), limit. Clients poll with after= to follow a run.
+func (s *Server) handleRunEvents(w http.ResponseWriter, r *http.Request) {
+	root := rootRunID(chi.URLParam(r, "runID"))
+	q := r.URL.Query()
+	after, err := parseNonNegative(q.Get("after"), 0)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid after parameter"})
+		return
+	}
+	limit, err := parseNonNegative(q.Get("limit"), defaultProgressLimit)
+	if err != nil || limit == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid limit parameter"})
+		return
+	}
+	if limit > maxProgressLimit {
+		limit = maxProgressLimit
+	}
+	run, err := s.db.GetRunByID(r.Context(), root)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to get run"})
+		return
+	}
+	if run == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "run not found"})
+		return
+	}
+	rows, err := s.db.ListRunEvents(r.Context(), root, after, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to list events"})
+		return
+	}
+	resp := runEventsResponse{Events: make([]runEvent, 0, len(rows)), Next: after, Status: run.Status}
+	for _, row := range rows {
+		resp.Events = append(resp.Events, runEvent{ID: row.ID, Event: json.RawMessage(row.Payload)})
+		resp.Next = row.ID
+	}
+	writeJSON(w, http.StatusOK, resp)
+}

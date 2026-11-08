@@ -301,6 +301,7 @@ Commands:
   cancel <run-id>               Cancel a run
   delete <run-id>               Delete a run
   logs <run-id> [--follow]      Show logs, or stream new logs with --follow
+  events <run-id> [--after ID]  Show the run's callback events (its sub-runs' too), after an event ID
 
 Create flags:
   --workflow NAME              Override the workflow entrypoint
@@ -316,6 +317,7 @@ Examples:
   markovd-cli runs create my-workflow --var model=claude-opus-4-6 --wait
   markovd-cli runs logs markov-run-1234 --follow
   markovd-cli --output json runs get markov-run-1234
+  markovd-cli --output json runs events markov-run-1234 --after 120
 
 Global flags go before "runs". Use markovd-cli --help to list them.
 Help is local and does not require authentication or a running server.`)
@@ -1263,6 +1265,8 @@ func runRuns(ctx context.Context, c *apiClient, cfg cliConfig, args []string, st
 		return writeOutput(stdout, cfg.Output, map[string]any{"deleted": true, "run_id": args[1]})
 	case "logs":
 		return runLogs(ctx, c, cfg, args[1:], stdout)
+	case "events":
+		return runEvents(ctx, c, cfg, args[1:], stdout)
 	default:
 		return fmt.Errorf("unknown runs command %q", args[0])
 	}
@@ -1496,6 +1500,60 @@ func parseMount(item string) (string, string, error) {
 		return "", "", fmt.Errorf("mount path must be absolute: %q", mount)
 	}
 	return name, mount, nil
+}
+
+type runEventsPage struct {
+	Events []struct {
+		ID    int             `json:"id"`
+		Event json.RawMessage `json:"event"`
+	} `json:"events"`
+	Next   int    `json:"next"`
+	Status string `json:"status"`
+}
+
+// runEvents prints one page of a run's callback events. With --output json it prints the page
+// as markovd returns it ({events, next, status}), for clients that follow a run by polling with
+// --after next; otherwise one line per event.
+func runEvents(ctx context.Context, c *apiClient, cfg cliConfig, args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("runs events", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	after, limit := 0, 0
+	fs.IntVar(&after, "after", 0, "")
+	fs.IntVar(&limit, "limit", 0, "")
+	positionals, err := parseCommandFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(positionals) < 1 {
+		return errors.New("usage: runs events <run-id> [--after ID] [--limit N]")
+	}
+	q := url.Values{}
+	q.Set("after", strconv.Itoa(after))
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	var page runEventsPage
+	if err := c.do(ctx, http.MethodGet, "/runs/"+url.PathEscape(positionals[0])+"/events?"+q.Encode(), nil, &page); err != nil {
+		return err
+	}
+	if cfg.Output == "json" || cfg.Output == "yaml" {
+		return writeOutput(stdout, cfg.Output, page)
+	}
+	for _, e := range page.Events {
+		var ev struct {
+			Type     string `json:"event_type"`
+			Workflow string `json:"workflow_name"`
+			Step     string `json:"step_name"`
+		}
+		_ = json.Unmarshal(e.Event, &ev)
+		where := ev.Workflow
+		if ev.Step != "" {
+			where += "." + ev.Step
+		}
+		fmt.Fprintf(stdout, "%d\t%s\t%s\n", e.ID, ev.Type, where)
+	}
+	fmt.Fprintf(stdout, "run %s; next --after %d\n", page.Status, page.Next)
+	return nil
 }
 
 func runLogs(ctx context.Context, c *apiClient, cfg cliConfig, args []string, stdout io.Writer) error {

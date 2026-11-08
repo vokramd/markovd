@@ -755,3 +755,19 @@ export MARKOVD_INSECURE_SKIP_TLS_VERIFY=true
   prints log data without the SSE completion marker, and keeps polling the run
   after the log stream ends until it completes, fails, is cancelled, or the
   command is interrupted. It reports the status while waiting.
+
+### Run events
+
+Print a run's callback events, its sub-runs' included, in the order markovd received them:
+
+```bash
+./bin/markovd-cli runs events markov-run-cfb29a83
+./bin/markovd-cli --output json runs events markov-run-cfb29a83 --after 120
+```
+
+With `--output json` the page is printed as the API returns it: `events` (each `{id, event}`, where
+`event` is the event exactly as markov sent it), `next` (the `--after` value for the next page) and
+`status` (the run's status in markovd). Poll with `--after next` until `status` is final and no
+events come back to follow a run as it happens; this is how Markov IDE shows a markovd run. Other
+output formats print one line per event. `--limit N` caps a page (default 500, at most 2000).
+

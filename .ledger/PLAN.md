@@ -33,6 +33,7 @@ None.
 
 ## Done Tasks
 
+- [Read a run's callback events back](tasks/done/run-events-endpoint.md)
 - [Make runs help available locally](tasks/done/cli-runs-help.md)
 - [Show run start date/time in CLI tables](tasks/done/cli-run-start-times.md)
 - [Use available width on large displays](tasks/done/wide-screen-layout.md)
@@ -71,6 +72,7 @@ None.
 
 ## Fixed Bugs
 
+- [A cancelled run shows as failed](bugs/fixed/late-callback-undoes-cancel.md)
 - [Runs help tries to authenticate](bugs/fixed/cli-runs-help-authenticates.md)
 - [`runs logs --follow` stops early on long log lines](bugs/fixed/runs-logs-follow-stops-on-long-lines.md)
 - [Schedule editor loading race](bugs/fixed/schedule-edit-form-loading-race.md)

@@ -247,12 +247,14 @@ func (d *DB) MarkRunPaused(ctx context.Context, runID string) error {
 	return err
 }
 
+// UpsertRunFromEvent records a run's status from a callback. A cancelled run stays cancelled:
+// the runner it killed still reports run_failed on the way out.
 func (d *DB) UpsertRunFromEvent(ctx context.Context, runID, workflowName, status string, startedAt, completedAt *time.Time) error {
 	_, err := d.ExecContext(ctx,
 		`INSERT INTO runs (run_id, workflow_name, status, started_at, completed_at)
 		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT (run_id) DO UPDATE SET
-		   status = EXCLUDED.status,
+		   status = CASE WHEN runs.status = 'cancelled' THEN runs.status ELSE EXCLUDED.status END,
 		   started_at = COALESCE(EXCLUDED.started_at, runs.started_at),
 		   completed_at = COALESCE(EXCLUDED.completed_at, runs.completed_at)`,
 		runID, workflowName, status, startedAt, completedAt,

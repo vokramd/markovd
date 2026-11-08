@@ -98,3 +98,26 @@ func TestDeleteRunRemovesForkEvents(t *testing.T) {
 		}
 	}
 }
+
+func TestALateCallbackDoesNotUndoACancel(t *testing.T) {
+	d := testDB(t)
+	ctx := context.Background()
+	root := "tcancel1"
+	t.Cleanup(func() { _ = d.DeleteRun(ctx, root) })
+	if err := d.UpsertRunFromEvent(ctx, root, "main", "running", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.UpdateRunStatus(ctx, root, "cancelled", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.UpsertRunFromEvent(ctx, root, "main", "failed", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	run, err := d.GetRunByID(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Status != "cancelled" {
+		t.Fatalf("status = %q, want cancelled", run.Status)
+	}
+}

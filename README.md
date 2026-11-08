@@ -109,6 +109,7 @@ All under `/api/v1/`, JWT-protected except login/register and the event receiver
 | POST | `/schedules/:id/pause` | Pause future launches |
 | POST | `/schedules/:id/resume` | Resume future launches |
 | GET | `/schedules/:id/occurrences` | Recent dispatch history |
+| GET    | `/runs/:id/events?after=N` | The run's callback events (sub-runs included) after event N, as markov sent them, with `next` and the run's `status`: poll it to follow a run |
 | POST   | `/runs/:id/cancel`     | Cancel a running run           |
 | POST   | `/runs/:id/resume`     | Resume a paused or failed run: `{"vars": {...}}`; a paused run needs at least one var |
 | DELETE | `/runs/:id`            | Delete a run, its Jobs and its data |
