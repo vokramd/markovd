@@ -26,16 +26,22 @@ func NewShellRunner(markovBin string) *ShellRunner {
 	}
 }
 
-func (r *ShellRunner) Start(ctx context.Context, req RunRequest) (string, error) {
+func (r *ShellRunner) Start(ctx context.Context, req RunRequest) (id string, startErr error) {
+	if req.RunID == "" {
+		req.RunID = generateRunID()
+	}
+	// A failed launch cannot send callbacks either. Scheduled runs already exist.
+	defer func() {
+		if startErr != nil && req.OnExit != nil {
+			req.OnExit(req.RunID, startErr)
+		}
+	}()
 	m, err := workflowdef.Materialize(req.WorkflowDefinition())
 	if err != nil {
 		return "", fmt.Errorf("materializing workflow: %w", err)
 	}
 
 	runID := req.RunID
-	if runID == "" {
-		runID = generateRunID()
-	}
 	args := []string{"run", m.Path, "--verbose", "--run-id", runID}
 	if req.WorkflowEntrypoint != "" {
 		args = append(args, "--workflow", req.WorkflowEntrypoint)
@@ -77,8 +83,21 @@ func (r *ShellRunner) Start(ctx context.Context, req RunRequest) (string, error)
 		for scanner.Scan() {
 			log.Printf("[markov] %s", scanner.Text())
 		}
-		if err := cmd.Wait(); err != nil {
+		if scanner.Err() != nil {
+			// Keep draining oversized log lines so the child cannot block on stdout.
+			_, _ = io.Copy(io.Discard, stdout)
+		}
+		err := cmd.Wait()
+		r.mu.Lock()
+		if r.procs[runID] == cmd.Process {
+			delete(r.procs, runID)
+		}
+		r.mu.Unlock()
+		if err != nil {
 			log.Printf("[markov] process exited with error: %v", err)
+		}
+		if req.OnExit != nil {
+			req.OnExit(runID, err)
 		}
 	}()
 

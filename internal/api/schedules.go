@@ -296,7 +296,7 @@ func (s *Server) dispatchSchedule(ctx context.Context, item *models.Schedule) {
 	if err == nil {
 		launchCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
 		var id string
-		id, err = s.runner.Start(launchCtx, runner.RunRequest{RunID: item.LastRunID, WorkflowYAML: item.Workflow.YAML,
+		id, err = s.runner.Start(launchCtx, runner.RunRequest{RunID: item.LastRunID, OnExit: s.shellProcessExited, WorkflowYAML: item.Workflow.YAML,
 			Workflow: models.WorkflowDefinition{Kind: item.Workflow.DefinitionKind, Files: item.Workflow.Files}, WorkflowEntrypoint: req.WorkflowEntrypoint,
 			Vars: req.Vars, Debug: req.Debug, Volumes: req.Volumes, SecretVolumes: req.SecretVolumes, CallbackURL: s.callbackURL, CallbackToken: s.callbackToken})
 		cancel()

@@ -133,6 +133,14 @@ func TestScheduleAPIAndDispatch(t *testing.T) {
 		t.Fatalf("starts=%d", len(fake.starts))
 	}
 	req := fake.starts[0]
+	if req.OnExit == nil {
+		t.Fatal("scheduled shell run has no exit handler")
+	}
+	req.OnExit(req.RunID, errors.New("fixture early exit"))
+	exitedRun, exitErr := database.GetRunByID(ctx, req.RunID)
+	if exitErr != nil || exitedRun == nil || exitedRun.Status != "failed" {
+		t.Fatalf("scheduled exit not recorded: %+v %v", exitedRun, exitErr)
+	}
 	if req.WorkflowYAML != wf.YAML || req.WorkflowEntrypoint != "main" || req.Vars["workflow_source_commit"] != "frozen123" || req.CallbackToken != "current-token" || req.CallbackURL != "http://current-callback" || !req.Debug {
 		t.Fatalf("dispatch lost snapshot/options: %+v", req)
 	}

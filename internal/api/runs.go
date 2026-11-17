@@ -130,7 +130,15 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	secretVolumesJSON, _ := json.Marshal(req.SecretVolumes)
 	workflowEntrypoint := strings.TrimSpace(req.WorkflowEntrypoint)
 
+	runID := runner.NewRunID()
+	run, err := s.db.CreateRun(r.Context(), runID, req.WorkflowName, wf.ID, claims.UserID, string(varsJSON), string(volumesJSON), string(secretVolumesJSON))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to record run"})
+		return
+	}
+
 	runReq := runner.RunRequest{
+		RunID: runID, OnExit: s.shellProcessExited,
 		WorkflowYAML:       wf.YAML,
 		Workflow:           models.WorkflowDefinition{Kind: wf.DefinitionKind, Files: wf.Files},
 		WorkflowEntrypoint: workflowEntrypoint,
@@ -142,16 +150,15 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 		SecretVolumes:      req.SecretVolumes,
 	}
 
-	runID, err := s.runner.Start(r.Context(), runReq)
+	_, err = s.runner.Start(r.Context(), runReq)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("failed to start run: %v", err)})
+		s.shellProcessExited(runID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to start run", "run_id": runID})
 		return
 	}
-
-	run, err := s.db.CreateRun(r.Context(), runID, req.WorkflowName, wf.ID, claims.UserID, string(varsJSON), string(volumesJSON), string(secretVolumesJSON))
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to record run"})
-		return
+	// A short-lived process may already have reported its final status.
+	if current, readErr := s.db.GetRunByID(r.Context(), runID); readErr == nil && current != nil {
+		run = current
 	}
 
 	writeJSON(w, http.StatusCreated, run)

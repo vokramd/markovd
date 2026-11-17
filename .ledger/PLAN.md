@@ -33,6 +33,8 @@ None.
 
 ## Done Tasks
 
+- [Report shell process exits](tasks/done/shell-exit-status.md)
+
 - [Read a run's callback events back](tasks/done/run-events-endpoint.md)
 - [Make runs help available locally](tasks/done/cli-runs-help.md)
 - [Show run start date/time in CLI tables](tasks/done/cli-run-start-times.md)
@@ -68,9 +70,10 @@ None.
 - [Markov job does not send callbacks](bugs/open/runner-bug-3-callbacks-silent.md)
 - [PVC artifact loader cannot read after job completion](bugs/open/runner-bug-6-artifact-loader-pvc.md)
 - [RunDetail UI memory growth on large runs](bugs/open/ui-memory-leak-large-runs.md)
-- [Run stays running when markov exits before emitting events](bugs/open/shell-runner-failure-leaves-run-running.md)
 
 ## Fixed Bugs
+
+- [Run stays running when markov exits before emitting events](bugs/fixed/shell-runner-failure-leaves-run-running.md) — source fixed, not deployed.
 
 - [A cancelled run shows as failed](bugs/fixed/late-callback-undoes-cancel.md)
 - [Runs help tries to authenticate](bugs/fixed/cli-runs-help-authenticates.md)
@@ -86,6 +89,8 @@ None.
 - [Kubernetes directory workflows mount files at the wrong path](bugs/fixed/runner-bug-7-directory-workflow-k8s-mount.md)
 
 ## Operational Notes
+
+- [Shell runner lifecycle](../docs/reference/shell-runner.md)
 
 - [Markovd CLI reference](../docs/reference/markovd-cli.md)
 - [Accessing a running instance](notes/accessing-running-instance.md)
