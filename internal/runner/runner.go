@@ -25,6 +25,9 @@ type SecretMount struct {
 }
 
 type RunRequest struct {
+	// OnExit reports a failed shell launch or a reaped process after final callbacks.
+	OnExit func(runID string, err error)
+
 	// RunID is allocated durably by the scheduler before launching. Empty generates one.
 	RunID              string
 	WorkflowYAML       string

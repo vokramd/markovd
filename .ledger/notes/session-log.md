@@ -616,3 +616,13 @@ CLI now accept lines up to 16 MiB; read errors are sent as `error` events; and
 after the stream ends, `--follow` waits for the run to finish. `go test ./...`
 passes. Committed with the run start-time and help changes, then merged to
 `main`. See the [bug](../bugs/fixed/runs-logs-follow-stops-on-long-lines.md).
+
+## 2026-11-17 — Shell process exit reporting source fix
+
+Implemented in isolated `fix/shell-runner-exit-status` worktree. API run recorded
+before launch; API and scheduled shell exits fail only unfinished runs, with an
+atomic safe diagnostic. No replay; final statuses preserved; reaped processes
+removed and oversized log output drained. Original-source regression fails.
+Full Go race suite (including isolated PostgreSQL integration), vet and builds
+passed. [Task](../tasks/done/shell-exit-status.md). Source only; no production
+changes, push, release or signing. Production PostgreSQL mitigation stays active.

@@ -261,3 +261,13 @@ func (d *DB) UpsertRunFromEvent(ctx context.Context, runID, workflowName, status
 	)
 	return err
 }
+
+// FailUnfinishedRun preserves final callback states and records one diagnostic atomically.
+func (d *DB) FailUnfinishedRun(ctx context.Context, runID, payload string) error {
+	_, err := d.ExecContext(ctx, `WITH failed AS (
+  UPDATE runs SET status='failed', completed_at=now()
+  WHERE run_id=$1 AND status IN ('pending','running') RETURNING run_id
+ ) INSERT INTO events (run_id,event_type,payload)
+ SELECT run_id,'run_failed',$2::jsonb FROM failed`, runID, payload)
+	return err
+}

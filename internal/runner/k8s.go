@@ -507,3 +507,6 @@ func ParseSecrets(s string) []string {
 	}
 	return secrets
 }
+
+// NewRunID allocates an ID before the durable run record and process launch.
+func NewRunID() string { return generateRunID() }
